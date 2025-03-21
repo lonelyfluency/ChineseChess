@@ -7,7 +7,7 @@
 #include "ai_agent.h"  // Include the common AI agent definitions
 
 // Use a search depth that suits your performance needs.
-#define AI_SEARCH_DEPTH 3
+#define AI_SEARCH_DEPTH 5
 #define AI_BUFFER_SIZE 10
 
 static const char* s_board =
@@ -65,48 +65,6 @@ static const char* get_qizi_name(char c)
     case 'B': return "兵";
     default: return "  ";
     }
-}
-
-
-static void draw_game(char qiju[10][9], int qiziselx, int qizisely, int cursorx, int cursory, int turns, char eat[2][17])
-{
-    int x = 0, y = 0, i = 0, row, col, color;
-    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD  c = { 0 };
-    SetConsoleCursorPosition(h, c);
-    printf("         Chinese Chess v1.0.0\n\n");
-    while (s_board[i]) {
-        row = y / 2; col = x / 4;
-        color = x % 4 == 0 && y % 2 == 0 && row == cursory && col == cursorx ? BACKGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE : 0;
-        if (x++ % 4 == 0 && y % 2 == 0 && qiju[row][col] && row <= 9) {
-            color |= qiju[row][col] >= 'a' && qiju[row][col] <= 'z' ? FOREGROUND_GREEN : FOREGROUND_RED;
-            color |= row == qizisely && col == qiziselx ? 0 : FOREGROUND_INTENSITY;
-            SetConsoleTextAttribute(h, color);
-            printf(get_qizi_name(qiju[row][col]));
-            x++; i++;
-        }
-        else {
-            SetConsoleTextAttribute(h, color | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-            putchar(s_board[i] == '>' ? '\\' : s_board[i]);
-        }
-        if (s_board[i++] == '\n') { x = 0; y++; }
-    }
-    c.X = 35; c.Y = 3; SetConsoleCursorPosition(h, c);
-    printf("%s Black", (turns & 1) ? "@" : " ");
-    c.X = 35; c.Y = 11; SetConsoleCursorPosition(h, c);
-    printf("Round %d", turns / 2 + 1);
-    c.X = 35; c.Y = 13; SetConsoleCursorPosition(h, c);
-    printf("%s Red", (turns & 1) ? " " : "@");
-    for (row = 0; row < 4; row++) {
-        c.X = 35; c.Y = 5 + row; SetConsoleCursorPosition(h, c);
-        SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED);
-        for (col = 0; col < 4; col++) printf("%s", get_qizi_name(eat[1][1 + row * 4 + col]));
-        c.X = 35; c.Y = 15 + row; SetConsoleCursorPosition(h, c);
-        SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
-        for (col = 0; col < 4; col++) printf("%s", get_qizi_name(eat[0][1 + row * 4 + col]));
-    }
-    SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    c.X = 0; c.Y = 24; SetConsoleCursorPosition(h, c);
 }
 
 static void limit_cursorxy(int* x, int* y)
@@ -273,6 +231,98 @@ static void record_move(char qipu[1024][5], int top, char srcx, char srcy, char 
         qipu[top][0] = srcx; qipu[top][1] = srcy;
         qipu[top][2] = dstx; qipu[top][3] = dsty;
         qipu[top][4] = dstq;
+    }
+}
+
+static void draw_game(char qiju[10][9], int qiziselx, int qizisel_y, int cursorx, int cursory, int turns, char eat[2][17], char qipu[][5], int move_count)
+{
+    int x = 0, y = 0, i = 0, row, col, color;
+    HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD c = { 0 };
+    SetConsoleCursorPosition(h, c);
+    printf("         Chinese Chess v1.0.0\n\n");
+    while (s_board[i]) {
+        row = y / 2; col = x / 4;
+        color = (x % 4 == 0 && y % 2 == 0 && row == cursory && col == cursorx)
+            ? BACKGROUND_INTENSITY | BACKGROUND_RED | BACKGROUND_GREEN | BACKGROUND_BLUE
+            : 0;
+        if (x++ % 4 == 0 && y % 2 == 0 && qiju[row][col] && row <= 9) {
+            color |= (qiju[row][col] >= 'a' && qiju[row][col] <= 'z')
+                ? FOREGROUND_GREEN : FOREGROUND_RED;
+            color |= (row == qizisel_y && col == qiziselx) ? 0 : FOREGROUND_INTENSITY;
+            SetConsoleTextAttribute(h, color);
+            printf(get_qizi_name(qiju[row][col]));
+            x++; i++;
+        }
+        else {
+            SetConsoleTextAttribute(h, color | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+            putchar(s_board[i] == '>' ? '\\' : s_board[i]);
+        }
+        if (s_board[i++] == '\n') { x = 0; y++; }
+    }
+    c.X = 35; c.Y = 3; SetConsoleCursorPosition(h, c);
+    printf("%s Black", (turns & 1) ? "@" : " ");
+    c.X = 35; c.Y = 11; SetConsoleCursorPosition(h, c);
+    printf("Round %d", turns / 2 + 1);
+    c.X = 35; c.Y = 13; SetConsoleCursorPosition(h, c);
+    printf("%s Red", (turns & 1) ? " " : "@");
+    for (row = 0; row < 4; row++) {
+        c.X = 35; c.Y = 5 + row; SetConsoleCursorPosition(h, c);
+        SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED);
+        for (col = 0; col < 4; col++)
+            printf("%s", get_qizi_name(eat[1][1 + row * 4 + col]));
+        c.X = 35; c.Y = 15 + row; SetConsoleCursorPosition(h, c);
+        SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+        for (col = 0; col < 4; col++)
+            printf("%s", get_qizi_name(eat[0][1 + row * 4 + col]));
+    }
+
+    // Reset text attributes and move the cursor to the lower part of the screen.
+    SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+    c.X = 0; c.Y = 24; SetConsoleCursorPosition(h, c);
+
+    // --- Display Last Move ---
+    c.X = 0; c.Y = 25; SetConsoleCursorPosition(h, c);
+    if (move_count > 0) {
+        // Create a simulation board starting from the initial setup.
+        char sim_board[10][9];
+        memcpy(sim_board, s_qiju_init, sizeof(sim_board));
+        // Simulate all moves except the last one.
+        for (int m = 0; m < move_count - 1; m++) {
+            int sx = qipu[m][0], sy = qipu[m][1];
+            int dx = qipu[m][2], dy = qipu[m][3];
+            do_move(sim_board, sx, sy, dx, dy);
+        }
+        // Retrieve the last move record.
+        int srcx = qipu[move_count - 1][0];
+        int srcy = qipu[move_count - 1][1];
+        int dstx = qipu[move_count - 1][2];
+        int dsty = qipu[move_count - 1][3];
+        // Simulate the last move.
+        do_move(sim_board, srcx, srcy, dstx, dsty);
+        char moving_piece = sim_board[dsty][dstx];
+
+        // Set color based on piece type.
+        if (moving_piece >= 'A' && moving_piece <= 'Z') {
+            // Red piece.
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_RED);
+        }
+        else if (moving_piece >= 'a' && moving_piece <= 'z') {
+            // Black piece.
+            SetConsoleTextAttribute(h, FOREGROUND_INTENSITY | FOREGROUND_GREEN);
+        }
+        else {
+            SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        }
+        // Print the moving piece.
+        printf("%s", get_qizi_name(moving_piece));
+        // Reset text color for the rest of the text.
+        SetConsoleTextAttribute(h, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+        // Print move details.
+        printf(": (%d,%d) -> (%d,%d)", srcx, srcy, dstx, dsty);
+    }
+    else {
+        printf("No moves yet.");
     }
 }
 
@@ -540,9 +590,7 @@ int main(void)
     }
 
     // --- AI Agent Assignment ---
-    // Here we define an array of function pointers for the AI agent of each side.
-    // For demonstration, we assign the red AI to use the minimax agent,
-    // and the black AI to use the random agent.
+    // For demonstration, we assign both sides to use the minimax agent.
     extern Move random_agent(char board[10][9], int turn); // From random_agent.c
     //AIAgent ai_agent[2] = { minimax_agent, random_agent };
     AIAgent ai_agent[2] = { minimax_agent, minimax_agent };
@@ -550,12 +598,13 @@ int main(void)
     // Main game loop.
     while (key != 'q' && key != 'Q') {
         turn = numt & 1;
-        draw_game(qiju, qizisel_x, qizisel_y, cursorx[turn], cursory[turn], numt, eat);
+        // Pass move record and count so draw_game can display the last move.
+        draw_game(qiju, qizisel_x, qizisel_y, cursorx[turn], cursory[turn], numt, eat, qipu, numt);
 
         // Check for a win state at the beginning of each iteration.
         int win_state = check_win_state(qiju);
         if (win_state != 0) {
-            draw_game(qiju, qizisel_x, qizisel_y, cursorx[turn], cursory[turn], numt, eat);
+            draw_game(qiju, qizisel_x, qizisel_y, cursorx[turn], cursory[turn], numt, eat, qipu, numt);
             if (win_state == 1)
                 printf("Red wins!\n");
             else if (win_state == 2)
@@ -578,23 +627,19 @@ int main(void)
         // --- AI Move Section ---
         if (ai_control[turn]) {
             printf("AI is thinking...\n");
-            // Instead of calling get_best_move directly, use the chosen AI agent.
             Move ai_move = ai_agent[turn](qiju, turn);
             if (check_move(qiju, ai_move.srcx, ai_move.srcy, ai_move.dstx, ai_move.dsty)) {
-                // Use the destination coordinates for capturing.
                 if (qiju[ai_move.dsty][ai_move.dstx])
                     eat[turn][++eat[turn][0]] = qiju[ai_move.dsty][ai_move.dstx];
                 record_move(qipu, numt, ai_move.srcx, ai_move.srcy, ai_move.dstx, ai_move.dsty,
                     qiju[ai_move.dsty][ai_move.dstx]);
                 do_move(qiju, ai_move.srcx, ai_move.srcy, ai_move.dstx, ai_move.dsty);
-                // Update the cursor to the destination after the move.
                 cursorx[turn] = ai_move.dstx;
                 cursory[turn] = ai_move.dsty;
                 numt++;
                 qizisel_x = -1;
                 qizisel_y = -1;
 
-                // --- Update AI Move Buffer ---
                 AIMove new_move;
                 new_move.srcx = ai_move.srcx;
                 new_move.srcy = ai_move.srcy;
@@ -624,7 +669,7 @@ int main(void)
                 memset(eat, 0, sizeof(eat));
                 cursorx[0] = 4; cursorx[1] = 4;
                 cursory[0] = 9; cursory[1] = 0;
-                numt = 0; qizisel_x = -1;
+                numt = 0; qizisel_x = -1; qizisel_y = -1;
             }
             else {
                 system("cls");
@@ -638,7 +683,8 @@ int main(void)
             else if (qizisel_x != -1 && check_move(qiju, qizisel_x, qizisel_y, cursorx[turn], cursory[turn])) {
                 if (qiju[cursory[turn]][cursorx[turn]])
                     eat[turn][++eat[turn][0]] = qiju[cursory[turn]][cursorx[turn]];
-                record_move(qipu, numt, qizisel_x, qizisel_y, cursorx[turn], cursory[turn], qiju[cursory[turn]][cursorx[turn]]);
+                record_move(qipu, numt, qizisel_x, qizisel_y, cursorx[turn], cursory[turn],
+                    qiju[cursory[turn]][cursorx[turn]]);
                 do_move(qiju, qizisel_x, qizisel_y, cursorx[turn], cursory[turn]);
                 qizisel_x = -1; qizisel_y = -1;
                 numt++;
