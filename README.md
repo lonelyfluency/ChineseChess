@@ -13,11 +13,11 @@ Just open it in Visual Studio (https://visualstudio.microsoft.com/), build and r
 Follow the instructions in terminal.
 
 1. When start running you will see mode selection page:
-    !()[./resources/1.png]
+    ![](./resources/1.png)
 
 2. Player vs AI mode:
-    !()[./resources/2.png]
-    !()[./resources/3.png]
+    ![](./resources/2.png)
+    ![](./resources/3.png)
 
 3. AI vs AI mode:
-    !()[./resources/aivsai.png]
+    ![](./resources/aivsai.png)
