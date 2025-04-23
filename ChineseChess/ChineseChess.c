@@ -7,7 +7,7 @@
 #include "ai_agent.h"  // Include the common AI agent definitions
 
 // Use a search depth that suits your performance needs.
-#define AI_SEARCH_DEPTH 5
+#define AI_SEARCH_DEPTH 3
 #define AI_BUFFER_SIZE 10
 
 static const char* s_board =
